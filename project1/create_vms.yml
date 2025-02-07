@@ -1,0 +1,78 @@
+---
+- name: Create two virtual machines
+  hosts: localhost
+  become: true
+  gather_facts: false
+
+  vars:
+    # 基底映像檔的路徑
+    base_image_path: "/home/<你的使用者>/jammy.qcow2"
+
+    # VM 通用設定
+    vcpus: 1
+    memory_mb: 1024
+    disk_size_gb: 10
+    network_name: "default"  # libvirt 預設網路
+
+    # mail VM
+    mail_vm_name: "mail-vm"
+    mail_vm_disk: "/var/lib/libvirt/images/mail-vm.qcow2"
+    mail_vm_ip: "192.168.122.10"
+
+    # ssh VM
+    ssh_vm_name: "ssh-vm"
+    ssh_vm_disk: "/var/lib/libvirt/images/ssh-vm.qcow2"
+    ssh_vm_ip: "192.168.122.11"
+
+  tasks:
+    - name: 複製並建立 Mail VM 磁碟檔案
+      command: >
+        qemu-img create -f qcow2 -b {{ base_image_path }}
+        {{ mail_vm_disk }} {{ disk_size_gb }}G
+      args:
+        creates: "{{ mail_vm_disk }}"
+
+    - name: 建立 Mail VM
+      community.general.virt:
+        name: "{{ mail_vm_name }}"
+        state: running
+        autostart: true
+        memory: "{{ memory_mb }}"
+        vcpus: "{{ vcpus }}"
+        disks:
+          - name: disk0
+            device: disk
+            path: "{{ mail_vm_disk }}"
+            size: "{{ disk_size_gb * 1024 }}"
+          # 如果要使用 cloud-init drive
+          # - name: cidata
+          #   type: cdrom
+          #   path: "/path/to/mail-vm-seed.iso"
+        networks:
+          - name: "{{ network_name }}"
+        console: pty,target_type=serial
+        virt_type: kvm
+
+    - name: 複製並建立 SSH VM 磁碟檔案
+      command: >
+        qemu-img create -f qcow2 -b {{ base_image_path }}
+        {{ ssh_vm_disk }} {{ disk_size_gb }}G
+      args:
+        creates: "{{ ssh_vm_disk }}"
+
+    - name: 建立 SSH VM
+      community.general.virt:
+        name: "{{ ssh_vm_name }}"
+        state: running
+        autostart: true
+        memory: "{{ memory_mb }}"
+        vcpus: "{{ vcpus }}"
+        disks:
+          - name: disk0
+            device: disk
+            path: "{{ ssh_vm_disk }}"
+            size: "{{ disk_size_gb * 1024 }}"
+        networks:
+          - name: "{{ network_name }}"
+        console: pty,target_type=serial
+        virt_type: kvm

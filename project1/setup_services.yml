@@ -1,0 +1,42 @@
+---
+- name: Setup Mail Service
+  hosts: mail_group
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Install Postfix
+      apt:
+        name: postfix
+        state: present
+        update_cache: yes
+
+    - name: Ensure Postfix is running
+      service:
+        name: postfix
+        state: started
+        enabled: true
+
+    # 可以視需求安裝其他 mail server 相關套件
+    # - name: Install mailutils
+    #   apt:
+    #     name: mailutils
+    #     state: present
+
+- name: Setup SSH Service
+  hosts: ssh_group
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Install OpenSSH server
+      apt:
+        name: openssh-server
+        state: present
+        update_cache: yes
+
+    - name: Ensure SSH is running
+      service:
+        name: ssh
+        state: started
+        enabled: true
